@@ -11,13 +11,12 @@ Code accompanying the paper:
 
 This repository contains the Jupyter notebooks used to build the dataset, train the model, and produce the figures in the paper. The pipeline:
 
-- Builds a monthly, gridded dataset over California for water years 2001–2020 by combining weather, vegetation (LAI / land cover), topography, snow, population, and OpenStreetMap road and powerline density.
-- Uses the [FPA-FOD](https://www.fs.usda.gov/rds/archive/Catalog/RDS-2013-0009.6) wildfire occurrence database to label monthly human-caused ignitions per grid cell.
-- Trains an XGBoost classifier in a **6-year moving-window** scheme (the model for year *t* is trained on years *t*−5 … *t*) so that the predictor–response relationship can drift with climate, land use, and infrastructure.
+- Builds a monthly, gridded dataset over California for water years 2001–2020 by combining weather, snow, vegetation, topography, road, and power infrastructure.
+- Uses the FPA-FOD (https://doi.org/10.2737/RDS-2013-0009.6) wildfire occurrence database to label monthly human-caused ignitions per grid cell.
+- Trains an XGBoost classifier in a **6-year moving-window** scheme (the model for year *t* is trained on years *t*−5 … *t*) so that the predictor–response relationship can change with time.
 - Evaluates the model with AUC-ROC and AUC-PRG across space and time and uses SHAP for feature attribution.
-- Includes a climate-anomaly experiment exploring how ignition probability shifts under perturbed weather inputs.
-
-Reported skill in the paper: AUC-ROC = 0.84, AUC-PRG = 0.96. Road density, powerline density, maximum temperature, and topography are the dominant predictors.
+- Evaluates the model performance on capturing broad spatial distribution, seasonal cycle, and interannual variability.
+- Includes a climatology experiment to assess the contribution of interannual weather variability.
 
 ## Repository structure
 
@@ -29,25 +28,24 @@ Notebooks are named `<stage> <step> <description>.ipynb` and are intended to be 
 
 | Stage | Notebooks | What it does |
 |---|---|---|
-| **00 — Grid match** | `00 Fire/Line/Road/Slope/Veg_Weather_Grid_Match.ipynb` | Reproject and match each raw layer (FPA-FOD ignitions, OSM lines, OSM roads, slope/DEM, vegetation) onto the common weather grid. |
-| **01 — Data clean** | `01 01 … 01 05` | Clean and harmonize the raw inputs: weather (1994–2023), LAI, population, snow, sub-region masks. |
-| **02 — Feature merge** | `02 01 … 02 06` | Join cleaned inputs into per-cell feature tables; fill wind-direction NAs; build static (time-invariant) features; add OpenStreetMap roads/powerlines. |
+| **00 — Grid match** | `00 Fire/Line/Road/Slope/Veg_Weather_Grid_Match.ipynb` | Reproject and match each raw layer onto the common weather grid. |
+| **01 — Data clean** | `01 01 … 01 05` | Clean and harmonize the raw inputs. |
+| **02 — Feature merge** | `02 01 … 02 06` | Join cleaned inputs into per-cell feature tables; fill wind-direction NAs; build static (time-invariant) features; add OpenStreetMap power infrastructures. |
 | **03 — Aggregate & label** | `03 01 … 03 04` | Aggregate weather to monthly, build monthly fire labels from FPA-FOD, assemble the modeling table, and prepare a calibration split. |
 | **04 — Model** | `04 01` 6-year moving-window XGBoost (paper model); `04 02` X-year window-length sensitivity / power test. |
 | **05 — Evaluate** | `05 01` metrics + SHAP feature importance; `05 02` spatio-temporal performance maps. |
-| **06 — Climate anomaly** | `06 Climate_Anomaly_Test.ipynb` | Perturb weather inputs and re-score to probe sensitivity to climate change. |
+| **06 — Climate anomaly** | `06 Climate_Anomaly_Test.ipynb` | Monthly weather inputs during testing were replaced with their 2001–2020 multi-year mean. |
 
 ## Data
 
 The notebooks expect raw data on a local disk; this repository does **not** redistribute the source datasets. Key sources:
 
 - **Fire ignitions:** USFS Fire Program Analysis Fire-Occurrence Database (FPA-FOD), human-caused ignitions only.
-- **Weather:** monthly-aggregated meteorological grids (temperature, precipitation, wind, VPD, etc.) over California.
-- **Vegetation:** MODIS LAI; land-cover classes used to mask out water / urban / agriculture.
-- **Topography:** DEM-derived slope.
-- **Snow:** snow-cover / SWE grids.
-- **Population:** gridded population product.
-- **Infrastructure:** OpenStreetMap roads and powerlines (density per cell).
+- **Weather:** GRIDMET (https://doi.org/10.1002/joc.3413).
+- **Snow:** SWE (https://doi.org/10.5067/0GGPB220EX6A).
+- **Vegetation:** GLASS LAI (https://doi.org/10.1175/JCLI4054.1); CALVEG (https://data.fs.usda.gov/geodata/edw/datasets.php?xmlKeyword=calveg).
+- **Topography:** DEM-derived slope (https://srtm.csi.cgiar.org).
+- **Infrastructure:** Road (10.1088/1748-9326/aabd42); Power Infrastructure (https://www.openstreetmap.org/export#map=5/51.50/-0.10).
 
 Each notebook has a configuration cell near the top (`PROJECT_ROOT = ...`) that you must edit to point at your local data paths. Intermediate outputs are written as Parquet under `Clean_Data/` and `Summary_Data/`.
 
