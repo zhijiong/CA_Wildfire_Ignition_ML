@@ -1,0 +1,16 @@
+.DS_Store
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+
+# Local data — not redistributed
+data/
+Clean_Data/
+Summary_Data/
+Logs/
+*.parquet
+*.nc
+
+# Editor
+.vscode/
+.idea/
